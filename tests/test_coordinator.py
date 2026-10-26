@@ -3,30 +3,23 @@
 from unittest.mock import AsyncMock
 
 import pytest
-from pytest_homeassistant.common import MockConfigEntry
-
-from homeassistant.components.pjm_gats.coordinator import (
-    PjmGatsApiError,
-    PjmGatsAuthError,
-)
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import UpdateFailed
 
+from custom_components.pjm_gats.coordinator import (
+    PjmGatsApiError,
+    PjmGatsAuthError,
+    PjmGatsDataUpdateCoordinator,
+)
+
 
 async def test_coordinator_first_run(
     hass: HomeAssistant,
-    mock_config_entry: MockConfigEntry,
     mock_pjm_gats_client: AsyncMock,
 ) -> None:
     """Test the coordinator on its first run."""
-    from homeassistant.components.pjm_gats.coordinator import (
-        PjmGatsDataUpdateCoordinator,
-    )
-
-    coordinator = PjmGatsDataUpdateCoordinator(
-        hass, mock_config_entry, mock_pjm_gats_client
-    )
+    coordinator = PjmGatsDataUpdateCoordinator(hass, mock_pjm_gats_client)
     data = await coordinator._async_update_data()
 
     assert data == mock_pjm_gats_client.get_home_page_data.return_value
@@ -35,21 +28,12 @@ async def test_coordinator_first_run(
 
 async def test_coordinator_auth_error(
     hass: HomeAssistant,
-    mock_config_entry: MockConfigEntry,
     mock_pjm_gats_client: AsyncMock,
 ) -> None:
     """Test the coordinator handles auth error."""
-    from homeassistant.components.pjm_gats.coordinator import (
-        PjmGatsDataUpdateCoordinator,
-    )
+    mock_pjm_gats_client.get_home_page_data.side_effect = PjmGatsAuthError("Auth failed")
 
-    mock_pjm_gats_client.get_home_page_data.side_effect = PjmGatsAuthError(
-        "Auth failed"
-    )
-
-    coordinator = PjmGatsDataUpdateCoordinator(
-        hass, mock_config_entry, mock_pjm_gats_client
-    )
+    coordinator = PjmGatsDataUpdateCoordinator(hass, mock_pjm_gats_client)
 
     with pytest.raises(ConfigEntryAuthFailed):
         await coordinator._async_update_data()
@@ -57,19 +41,12 @@ async def test_coordinator_auth_error(
 
 async def test_coordinator_api_error(
     hass: HomeAssistant,
-    mock_config_entry: MockConfigEntry,
     mock_pjm_gats_client: AsyncMock,
 ) -> None:
     """Test the coordinator handles API error."""
-    from homeassistant.components.pjm_gats.coordinator import (
-        PjmGatsDataUpdateCoordinator,
-    )
-
     mock_pjm_gats_client.get_home_page_data.side_effect = PjmGatsApiError("API error")
 
-    coordinator = PjmGatsDataUpdateCoordinator(
-        hass, mock_config_entry, mock_pjm_gats_client
-    )
+    coordinator = PjmGatsDataUpdateCoordinator(hass, mock_pjm_gats_client)
 
     with pytest.raises(UpdateFailed):
         await coordinator._async_update_data()
@@ -77,17 +54,10 @@ async def test_coordinator_api_error(
 
 async def test_coordinator_subsequent_run(
     hass: HomeAssistant,
-    mock_config_entry: MockConfigEntry,
     mock_pjm_gats_client: AsyncMock,
 ) -> None:
     """Test the coordinator on subsequent runs."""
-    from homeassistant.components.pjm_gats.coordinator import (
-        PjmGatsDataUpdateCoordinator,
-    )
-
-    coordinator = PjmGatsDataUpdateCoordinator(
-        hass, mock_config_entry, mock_pjm_gats_client
-    )
+    coordinator = PjmGatsDataUpdateCoordinator(hass, mock_pjm_gats_client)
 
     # First run
     data1 = await coordinator._async_update_data()
@@ -112,4 +82,4 @@ async def test_coordinator_subsequent_run(
 
     data2 = await coordinator._async_update_data()
     assert data2 == updated_data
-    assert mock_pjm_gats_client.get_home_page_data.call_count == 2
+    assert mock_pjm_gats_client.get_home_page_data.call_count == 2  # noqa: PLR2004

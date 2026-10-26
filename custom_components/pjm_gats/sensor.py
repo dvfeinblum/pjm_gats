@@ -1,5 +1,6 @@
 """PJM GATS sensor platform."""
 
+# pylint: disable=unexpected-keyword-arg
 from dataclasses import dataclass
 from typing import override
 
@@ -107,7 +108,7 @@ SENSORS: tuple[PjmGatsSensorDescription, ...] = (
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
+    _hass: HomeAssistant,
     entry: PjmGatsConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:

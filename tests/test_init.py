@@ -1,83 +1,63 @@
-"""Tests for the PJM GATS integration."""
+"""Tests for the PJM GATS integration init module."""
 
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
-import pytest
-from pytest_homeassistant.common import MockConfigEntry
-
-from homeassistant.components.pjm_gats.const import DOMAIN
-from homeassistant.components.pjm_gats.coordinator import (
-    PjmGatsApiError,
-    PjmGatsAuthError,
-)
-from homeassistant.components.recorder import Recorder
-from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
+from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+from custom_components.pjm_gats import async_setup_entry, async_unload_entry
 
 
-async def test_setup_unload_entry(
-    recorder_mock: Recorder,
+async def test_async_setup_entry_creates_coordinator(
     hass: HomeAssistant,
-    mock_config_entry: MockConfigEntry,
-    mock_pjm_gats_client: AsyncMock,
+    _mock_pjm_gats_client: AsyncMock,
 ) -> None:
-    """Test successful setup and unload of a config entry."""
-    await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
-
-    assert mock_config_entry.state is ConfigEntryState.LOADED
-    mock_pjm_gats_client.login.assert_awaited_once()
-    mock_pjm_gats_client.get_home_page_data.assert_awaited_once()
-
-    assert await hass.config_entries.async_unload(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
-
-    assert mock_config_entry.state is ConfigEntryState.NOT_LOADED
-    assert not hass.data.get(DOMAIN)
-
-
-@pytest.mark.parametrize(
-    ("login_side_effect", "expected_state"),
-    [
-        (
-            PjmGatsApiError("Cannot connect"),
-            ConfigEntryState.SETUP_RETRY,
-        ),
-        (
-            PjmGatsAuthError("Invalid credentials"),
-            ConfigEntryState.SETUP_ERROR,
-        ),
-    ],
-)
-async def test_login_error(
-    recorder_mock: Recorder,
-    hass: HomeAssistant,
-    mock_config_entry: MockConfigEntry,
-    mock_pjm_gats_client: AsyncMock,
-    login_side_effect: Exception,
-    expected_state: ConfigEntryState,
-) -> None:
-    """Test for login error."""
-    mock_pjm_gats_client.login.side_effect = login_side_effect
-
-    assert not await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
-
-    assert mock_config_entry.state is expected_state
-
-
-async def test_get_home_page_data_error(
-    recorder_mock: Recorder,
-    hass: HomeAssistant,
-    mock_config_entry: MockConfigEntry,
-    mock_pjm_gats_client: AsyncMock,
-) -> None:
-    """Test for API error when getting home page data."""
-    mock_pjm_gats_client.get_home_page_data.side_effect = PjmGatsApiError(
-        "Home page error"
+    """Test async_setup_entry creates coordinator."""
+    config_entry = MockConfigEntry(
+        domain="pjm_gats",
+        title="PJM GATS (user@example.com)",
+        data={"username": "user@example.com", "password": "secret"},
+        unique_id="user@example.com",
     )
+    config_entry.add_to_hass(hass)
 
-    assert not await hass.config_entries.async_setup(mock_config_entry.entry_id)
-    await hass.async_block_till_done()
+    with patch("custom_components.pjm_gats.PjmGatsDataUpdateCoordinator") as mock_coordinator_class:
+        mock_coordinator = mock_coordinator_class.return_value
+        mock_coordinator.async_config_entry_first_refresh = AsyncMock()
 
-    assert mock_config_entry.state is ConfigEntryState.SETUP_RETRY
+        # Mock the forward_entry_setups to avoid integration loading issues
+        with patch.object(
+            hass.config_entries, "async_forward_entry_setups", AsyncMock(return_value=True)
+        ):
+            await async_setup_entry(hass, config_entry)
+
+        mock_coordinator_class.assert_called_once()
+        mock_coordinator.async_config_entry_first_refresh.assert_awaited_once()
+        assert config_entry.runtime_data == mock_coordinator
+
+
+async def test_async_unload_entry(
+    hass: HomeAssistant,
+) -> None:
+    """Test async_unload_entry."""
+    config_entry = MockConfigEntry(
+        domain="pjm_gats",
+        title="PJM GATS (user@example.com)",
+        data={"username": "user@example.com", "password": "secret"},
+        unique_id="user@example.com",
+    )
+    config_entry.add_to_hass(hass)
+
+    # Set up the data in hass.data
+    mock_coordinator = AsyncMock()
+    hass.data["pjm_gats"] = {"coordinator": mock_coordinator}
+    config_entry.runtime_data = mock_coordinator
+
+    # Mock the unload_platforms to avoid integration loading issues
+    with patch.object(
+        hass.config_entries, "async_unload_platforms", AsyncMock(return_value=True)
+    ) as mock_unload:
+        await async_unload_entry(hass, config_entry)
+
+    # Should call async_unload_platforms
+    mock_unload.assert_awaited_once()

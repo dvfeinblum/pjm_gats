@@ -1,13 +1,12 @@
 """Coordinator for PJM GATS devices."""
 
-from datetime import timedelta
 import logging
 import re
+from datetime import timedelta
 from typing import Any, override
 
 from aiohttp import ClientSession, ClientTimeout
 from bs4 import BeautifulSoup
-
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
@@ -71,7 +70,7 @@ class PjmGatsClient:
             allow_redirects=False,
         )
 
-        if resp.status != 302:
+        if resp.status != 302:  # noqa: PLR2004
             raise PjmGatsAuthError("Invalid credentials")
 
         # Follow redirect
@@ -97,9 +96,7 @@ class PjmGatsClient:
 
         resp = await self.session.get(
             f"{self.BASE}/gats2/Home/Index",
-            timeout=ClientTimeout(
-                connect=15, sock_connect=15, sock_read=30, total=None
-            ),
+            timeout=ClientTimeout(connect=15, sock_connect=15, sock_read=30, total=None),
         )
         text = await resp.text()
         return resp.ok and "timed out" not in text.lower()

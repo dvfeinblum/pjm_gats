@@ -4,32 +4,13 @@ from collections.abc import Generator
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from pytest_homeassistant.common import MockConfigEntry
-
-from homeassistant.components.pjm_gats.const import DOMAIN
-from homeassistant.core import HomeAssistant
-
-
-@pytest.fixture
-def mock_config_entry(hass: HomeAssistant) -> MockConfigEntry:
-    """Return the default mocked config entry."""
-    config_entry = MockConfigEntry(
-        title="PJM GATS (user@example.com)",
-        domain=DOMAIN,
-        data={
-            "username": "user@example.com",
-            "password": "supersecret",
-        },
-    )
-    config_entry.add_to_hass(hass)
-    return config_entry
 
 
 @pytest.fixture
 def mock_pjm_gats_client() -> Generator[AsyncMock]:
     """Mock PJM GATS client."""
     with patch(
-        "homeassistant.components.pjm_gats.coordinator.PjmGatsClient", autospec=True
+        "custom_components.pjm_gats.coordinator.PjmGatsClient", autospec=True
     ) as mock_client_class:
         client = mock_client_class.return_value
         client.username = "user@example.com"
@@ -48,12 +29,3 @@ def mock_pjm_gats_client() -> Generator[AsyncMock]:
             "generator_status": "ACT",
         }
         yield client
-
-
-@pytest.fixture(autouse=True)
-def mock_setup_entry() -> Generator[AsyncMock]:
-    """Override async_setup_entry."""
-    with patch(
-        "homeassistant.components.pjm_gats.async_setup_entry", return_value=True
-    ) as mock_setup_entry:
-        yield mock_setup_entry

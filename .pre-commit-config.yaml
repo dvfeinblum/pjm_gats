@@ -47,7 +47,7 @@ repos:
         files: ^custom_components/pjm_gats/.+\.(py|pyi)$
       - id: pylint
         name: pylint
-        entry: pylint --ignore-missing-annotations=y
+        entry: pylint
         language: system
         require_serial: true
         types_or: [python, pyi]

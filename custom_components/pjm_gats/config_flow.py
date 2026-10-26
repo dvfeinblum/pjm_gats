@@ -1,10 +1,10 @@
 """Config flow for the PJM GATS integration."""
 
+# pylint: disable=broad-exception-caught, abstract-method
 import logging
 from typing import Any, override
 
 import probatio
-
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
@@ -37,9 +37,7 @@ class PjmGatsConfigFlow(ConfigFlow, domain="pjm_gats"):
     VERSION = 1
 
     @override
-    async def async_step_user(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Handle the initial step."""
         errors: dict[str, str] = {}
         if user_input is not None:
@@ -55,6 +53,4 @@ class PjmGatsConfigFlow(ConfigFlow, domain="pjm_gats"):
             else:
                 return self.async_create_entry(title=info["title"], data=user_input)
 
-        return self.async_show_form(
-            step_id="user", data_schema=DATA_SCHEMA, errors=errors
-        )
+        return self.async_show_form(step_id="user", data_schema=DATA_SCHEMA, errors=errors)
