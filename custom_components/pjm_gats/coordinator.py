@@ -178,13 +178,16 @@ type PjmGatsConfigEntry = ConfigEntry[PjmGatsDataUpdateCoordinator]
 class PjmGatsDataUpdateCoordinator(DataUpdateCoordinator[dict]):
     """Class to manage fetching PJM GATS data."""
 
-    def __init__(self, hass: HomeAssistant, client: PjmGatsClient) -> None:
+    def __init__(
+        self, hass: HomeAssistant, client: PjmGatsClient, entry: PjmGatsConfigEntry
+    ) -> None:
         """Initialize the coordinator."""
         super().__init__(
             hass,
             _LOGGER,
+            config_entry=entry,
             name=DOMAIN,
-            update_interval=timedelta(minutes=30),
+            update_interval=timedelta(days=1),
         )
         self.client = client
 
